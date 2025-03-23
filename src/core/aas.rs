@@ -277,3 +277,125 @@ impl AssetAdministrationShell {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_yaml;
+
+    fn load_aas_from_yaml(yaml_str: &str) -> AssetAdministrationShell {
+        serde_yaml::from_str(yaml_str).expect("Failed to parse YAML")
+    }
+
+    #[test]
+    fn test_find_reference_value_in_collection() {
+        let yaml = r#"
+id: "urn:aas:example"
+id_short: "ExampleAAS"
+submodels:
+  - id: "urn:aas:example:submodel1"
+    id_short: "Submodel1"
+    elements:
+      - element_type: "collection"
+        id_short: "Collection1"
+        value:
+        - element_type: "referenceelement"
+          id_short: "Ref1"
+          value: "http://example.com/resource"
+"#;
+        let aas = load_aas_from_yaml(yaml);
+
+        let result = aas.find_reference_value_in_collection("Submodel1", "Collection1", "Ref1");
+        assert_eq!(result, Some("http://example.com/resource".to_string()));
+    }
+
+    #[test]
+    fn test_find_all_sensor_ids_in_datasources() {
+        let yaml = r#"
+id: "urn:aas:example"
+id_short: "ExampleAAS"
+submodels:
+  - id: "urn:aas:example:submodel1"
+    id_short: "IoTDataSources"
+    elements:
+      - element_type: "collection"
+        id_short: "Sensors"
+        value:
+          - element_type: "property"
+            id_short: "SensorID"
+            value_type: "string"
+            value: "Sensor123"
+          - element_type: "collection"
+            id_short: "NestedCollection"
+            value:
+              - element_type: "property"
+                id_short: "SensorID"
+                value_type: "string"
+                value: "Sensor456"
+"#;
+        let aas = load_aas_from_yaml(yaml);
+
+        let sensor_ids = aas.find_all_sensor_ids_in_datasources("IoTDataSources", "Sensors");
+        assert_eq!(sensor_ids, vec!["Sensor123".to_string(), "Sensor456".to_string()]);
+    }
+
+    #[test]
+    fn test_resolve_sensor_reference() {
+        let yaml = r#"
+id: "urn:aas:example"
+id_short: "ExampleAAS"
+submodels:
+  - id: "urn:aas:example:submodel1"
+    id_short: "urn:aas:example:submodel1"
+    elements:
+      - element_type: "collection"
+        id_short: "SensorPowerAbsorption"
+        value:
+          - element_type: "property"
+            id_short: "SensorID"
+            value_type: "string"
+            value: "urn:iot-sensor:powerAbs123"
+"#;
+        let aas = load_aas_from_yaml(yaml);
+
+        let sensor_id = aas.resolve_sensor_reference("urn:aas:example:submodel1#SensorPowerAbsorption");
+        assert_eq!(sensor_id, Some("urn:iot-sensor:powerAbs123".to_string()));
+    }
+
+    #[test]
+    fn test_find_collection_by_id_short() {
+        let yaml = r#"
+id: "urn:aas:example"
+id_short: "ExampleAAS"
+submodels:
+  - id: "urn:aas:example:submodel1"
+    id_short: "Submodel1"
+    elements:
+      - element_type: "collection"
+        id_short: "ParentCollection"
+        value:
+          - element_type: "collection"
+            id_short: "TargetCollection"
+            value: []
+"#;
+        let aas = load_aas_from_yaml(yaml);
+
+        let submodel = aas.submodels.iter().find(|s| s.id_short == "Submodel1").unwrap();
+        let parent_collection = submodel
+            .elements
+            .iter()
+            .find_map(|elem| {
+                if let SubmodelElement::Collection(c) = elem {
+                    Some(c)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let target_collection =
+            AssetAdministrationShell::find_collection_by_id_short(parent_collection, "TargetCollection");
+        assert!(target_collection.is_some());
+        assert_eq!(target_collection.unwrap().id_short, "TargetCollection");
+    }
+}
