@@ -236,12 +236,7 @@ impl AssetAdministrationShell {
     /// - submodel: the short ID of the submodel containing the collection.
     /// - collection: the short ID of the collection containing the desired elements.
     /// - target: the short ID of the element to find (e.g., "SensorID").
-    pub fn find_elements_in_collection(
-        &self,
-        submodel: &str,
-        collection: &str,
-        target: &str,
-    ) -> Vec<String> {
+    pub fn find_elements_in_collection(&self, submodel: &str, collection: &str, target: &str) -> Vec<String> {
         self.submodels
             .iter()
             .find(|s| s.id_short == submodel)
@@ -271,7 +266,11 @@ impl AssetAdministrationShell {
 
     /// Recursively explores the given collection to find any sub-collections
     /// that contain a Property with id_short == "SensorID".
-    fn gather_sensor_ids_in_collection(collection: &SubmodelCollection, target: &str, result: &mut Vec<String>) {
+    fn gather_sensor_ids_in_collection(
+        collection: &SubmodelCollection,
+        target: &str,
+        result: &mut Vec<String>,
+    ) {
         for element in &collection.value {
             match element {
                 SubmodelElement::Collection(sub_coll) => {

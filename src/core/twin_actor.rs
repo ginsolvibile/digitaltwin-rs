@@ -4,8 +4,8 @@ use tokio::sync::mpsc;
 
 use crate::core::ActorStateType;
 use crate::core::{AssetAdministrationShell, AssetID, DeviceID};
-use crate::models::LightBulb;
 use crate::manager::ManagerMessage;
+use crate::models::LightBulb;
 use crate::network_receiver::NetworkMessage;
 
 /// Actor message types
@@ -95,7 +95,11 @@ impl TwinActor {
         }
         let _ = self
             .network_ch
-            .send(NetworkMessage::Subscribe(self.id(), self.send_ch.clone(), sensor_ids))
+            .send(NetworkMessage::Subscribe(
+                self.id(),
+                self.send_ch.clone(),
+                sensor_ids,
+            ))
             .await;
     }
 }

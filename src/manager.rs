@@ -1,4 +1,4 @@
-use log::{debug, info, error, trace};
+use log::{debug, error, info, trace};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
@@ -7,7 +7,7 @@ use tokio;
 use tokio::sync::mpsc;
 use tokio::task;
 
-use crate::core::{AssetAdministrationShell, twin_actor};
+use crate::core::{twin_actor, AssetAdministrationShell};
 use crate::network_receiver;
 
 #[derive(ThisError, Debug)]
@@ -59,13 +59,17 @@ impl Manager {
             debug!("Processing file: {:?}", path.display());
             if let Some(reader) = File::open(&path).map(BufReader::new).ok() {
                 let aas = AssetAdministrationShell::from_reader(reader)
-                .map_err(|e| Error::GenericError(e.to_string()))?;
+                    .map_err(|e| Error::GenericError(e.to_string()))?;
                 trace!("{:#?}", aas);
                 if !twins.insert(aas.id.clone()) {
                     error!("Duplicate AAS id: {}, ignored", aas.id);
                     continue;
                 }
-                info!("Creating new digital twin for {} ({:?})", aas.id, aas.description.as_ref());
+                info!(
+                    "Creating new digital twin for {} ({:?})",
+                    aas.id,
+                    aas.description.as_ref()
+                );
                 let twin = twin_actor::TwinActor::new(aas, self.send_ch.clone(), self.network_ch.clone());
                 task::spawn(twin_actor::body(Box::new(twin)));
             }
