@@ -2,12 +2,15 @@
 /// Format and fields names are loosely based on the IDTA AAS specification available at
 /// https://www.plattform-i40.de
 use serde::{Deserialize, Serialize};
+use serde_yaml;
+
+use super::AssetID;
 
 /// A top-level Asset Administration Shell (AAS).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetAdministrationShell {
     /// Unique identifier of the asset (URI, URN, or any unique string).
-    pub id: String,
+    pub id: AssetID,
     /// Human-readable name or short description.
     pub id_short: String,
     /// Optional: additional metadata about the asset or its owner.
@@ -124,6 +127,12 @@ pub enum Value {
 }
 
 impl AssetAdministrationShell {
+    /// Load an AssetAdministrationShell from a YAML string.
+    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<Self, String> {
+        // TODO: validate id_short with [a-zA-Z][a-zA-Z0-9_\-\.]{0,127}
+        serde_yaml::from_reader(reader).map_err(|e| format!("Failed to parse YAML: {}", e))
+    }
+
     /// Given a submodel ID, collection ID, and reference element ID,
     /// this method finds the reference element and returns its value.
     pub fn find_reference_value_in_collection(
@@ -222,20 +231,24 @@ impl AssetAdministrationShell {
         None
     }
 
-    /// Returns a list of all sensor IDs found under the specified
+    /// Returns a list of all elements with the given ID found under the specified
     /// submodel (e.g., "IoTDataSources") and collection (e.g., "Sensors").
-    pub fn find_all_sensor_ids_in_datasources(
+    /// - submodel: the short ID of the submodel containing the collection.
+    /// - collection: the short ID of the collection containing the desired elements.
+    /// - target: the short ID of the element to find (e.g., "SensorID").
+    pub fn find_elements_in_collection(
         &self,
-        submodel_id_short: &str,
-        sensors_collection_id_short: &str,
+        submodel: &str,
+        collection: &str,
+        target: &str,
     ) -> Vec<String> {
         self.submodels
             .iter()
-            .find(|s| s.id_short == submodel_id_short)
+            .find(|s| s.id_short == submodel)
             .and_then(|submodel| {
                 submodel.elements.iter().find_map(|elem| {
                     if let SubmodelElement::Collection(c) = elem {
-                        if c.id_short == sensors_collection_id_short {
+                        if c.id_short == collection {
                             Some(c)
                         } else {
                             None
@@ -249,6 +262,7 @@ impl AssetAdministrationShell {
                 let mut sensor_ids = Vec::new();
                 AssetAdministrationShell::gather_sensor_ids_in_collection(
                     sensors_collection,
+                    target,
                     &mut sensor_ids,
                 );
                 sensor_ids
@@ -257,15 +271,15 @@ impl AssetAdministrationShell {
 
     /// Recursively explores the given collection to find any sub-collections
     /// that contain a Property with id_short == "SensorID".
-    fn gather_sensor_ids_in_collection(collection: &SubmodelCollection, result: &mut Vec<String>) {
+    fn gather_sensor_ids_in_collection(collection: &SubmodelCollection, target: &str, result: &mut Vec<String>) {
         for element in &collection.value {
             match element {
                 SubmodelElement::Collection(sub_coll) => {
-                    AssetAdministrationShell::gather_sensor_ids_in_collection(sub_coll, result);
+                    AssetAdministrationShell::gather_sensor_ids_in_collection(sub_coll, target, result);
                 }
                 SubmodelElement::Property(prop) => {
-                    if prop.id_short == "SensorID" {
-                        // String expected for SensorID
+                    if prop.id_short == target {
+                        // String expected
                         if let Value::Str(sensor_id) = &prop.value {
                             result.push(sensor_id.clone());
                         }
@@ -335,7 +349,7 @@ submodels:
 "#;
         let aas = load_aas_from_yaml(yaml);
 
-        let sensor_ids = aas.find_all_sensor_ids_in_datasources("IoTDataSources", "Sensors");
+        let sensor_ids = aas.find_elements_in_collection("IoTDataSources", "Sensors", "SensorID");
         assert_eq!(sensor_ids, vec!["Sensor123".to_string(), "Sensor456".to_string()]);
     }
 

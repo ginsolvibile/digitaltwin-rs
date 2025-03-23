@@ -1,0 +1,54 @@
+id: "urn:aas:smart-home:light:light-bulb:id-000001"
+id_short: "LightBulb1"
+description: "A simple light bulb"
+submodels:
+  - id: "urn:aas:smart-home:light:power"
+    id_short: "PowerAndElectrical"
+    elements:
+      - element_type: "collection"
+        id_short: "CurrentPowerDraw"
+        value:
+          - element_type: "property"
+            id_short: "CurrentPowerValue"
+            value_type: "float"
+            value: 0.0
+
+          - element_type: "referenceelement"
+            id_short: "DataSource"
+            value: "urn:aas:smart-home:light:datasources#SensorPowerAbsorption"
+
+      - element_type: "operation"
+        id_short: "SwitchOn"
+        input_variables: []
+        output_variables: []
+
+      - element_type: "operation"
+        id_short: "SwitchOff"
+        input_variables: []
+        output_variables: []
+
+  - id: "urn:aas:smart-home:light:datasources"
+    id_short: "IoTDataSources"
+    elements:
+      - element_type: "collection"
+        id_short: "Sensors"
+        value:
+          - element_type: "collection"
+            id_short: "SensorPowerAbsorption"
+            value:
+              - element_type: "property"
+                id_short: "SensorID"
+                value_type: "string"
+                value: "urn:iot-sensor:powerAbs456"
+              - element_type: "property"
+                id_short: "MeasurementType"
+                value_type: "string"
+                value: "PowerAbsorption"
+
+  - id: "urn:aas:smart-home:light:maintenance"
+    id_short: "MaintenanceDiagnostics"
+    elements:
+      - element_type: "property"
+        id_short: "WorkingHours"
+        value_type: "float"
+        value: 0.0
