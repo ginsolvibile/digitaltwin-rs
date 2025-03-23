@@ -1,0 +1,39 @@
+id: "urn:aas:smart-home:ev:vw-eup:vin-WVWZZZAAZJD000001"
+id_short: "EV-Volkswagen-eUp"
+description: "Electric vehicle digital twin"
+submodels:
+  - id: "urn:aas:smart-home:ev:battery-charging"
+    id_short: "BatteryAndCharging"
+    elements:
+      - element_type: "property"
+        id_short: "StateOfCharge"
+        value_type: "float"
+        value: 75.0
+
+      - element_type: "property"
+        id_short: "BatteryHealth"
+        value_type: "string"
+        value: "Good"
+
+      - element_type: "operation"
+        id_short: "StartCharging"
+        input_variables: []
+        output_variables: []
+
+      - element_type: "operation"
+        id_short: "StopCharging"
+        input_variables: []
+        output_variables: []
+
+  - id: "urn:aas:smart-home:ev:maintenance-lifecycle"
+    id_short: "MaintenanceAndLifecycle"
+    elements:
+      - element_type: "property"
+        id_short: "FirmwareVersion"
+        value_type: "string"
+        value: "v10.2.3"
+
+      - element_type: "property"
+        id_short: "MaintenanceDue"
+        value_type: "bool"
+        value: false
