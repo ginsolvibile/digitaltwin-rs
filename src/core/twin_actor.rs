@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 
 use crate::core::ActorStateType;
 use crate::core::{AssetAdministrationShell, AssetID, DeviceID};
-use crate::models::light_bulb::{LightBulb, Off};
+use crate::models::LightBulb;
 use crate::manager::ManagerMessage;
 use crate::network_receiver::NetworkMessage;
 
@@ -39,9 +39,9 @@ impl TwinActor {
     ) -> Self {
         let object_type = aas.id.split(':').nth(3).unwrap(); // FIXME: unwrap
         let inner_state = match object_type {
-            "light" => LightBulb::<Off>::create(0.5),
-            "ev" => LightBulb::<Off>::create(0.5),
-            "charging-station" => LightBulb::<Off>::create(0.5),
+            "light" => LightBulb::<()>::create(0.5),
+            "ev" => LightBulb::<()>::create(0.5),
+            "charging-station" => LightBulb::<()>::create(0.5),
             _ => panic!("Unknown object type: {}", object_type),
         };
         let slots = match object_type {

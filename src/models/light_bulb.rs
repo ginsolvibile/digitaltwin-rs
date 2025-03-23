@@ -20,6 +20,15 @@ pub struct LightBulb<State> {
 
 // TODO: generate with a macro
 impl<T> LightBulb<T> {
+    /// Create a new LightBulb default state with the given threshold
+    pub fn create(threshold: f32) -> Box<ActorStateType> {
+        Box::new(LightBulb {
+            dispatch_map: LightBulb::<Off>::create_dispatch_map(),
+            threshold,
+            _state: PhantomData::<Off>,
+        })
+    }
+
     pub fn slots() -> Vec<&'static str> {
         vec!["CurrentPowerDraw"]
     }
@@ -106,14 +115,6 @@ impl LightBulb<Off> {
 }
 
 impl LightBulb<Off> {
-    pub fn create(threshold: f32) -> Box<ActorStateType> {
-        Box::new(LightBulb {
-            dispatch_map: LightBulb::<Off>::create_dispatch_map(),
-            threshold,
-            _state: PhantomData::<Off>,
-        })
-    }
-
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
         if pwr >= self.threshold {
             Box::new(LightBulb {
