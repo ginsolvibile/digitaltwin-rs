@@ -114,9 +114,11 @@ pub async fn body(mut twin: Box<TwinActor>) {
                     ActorMessage::InputChange(obj_id, value) => {
                         if let Some(slot) = twin.slot_map.get(&obj_id) {
                             debug!("Received input change: {} = {}", slot, value);
-                            twin.inner_state = twin.inner_state.input_change(&slot, value);
+                            twin.inner_state = twin.inner_state.input_change(slot, value);
+                            debug!("New state: {:?}", twin.inner_state);
                         } else {
                             warn!("Received input change from unknown object: {}", obj_id);
+                            debug!("current slot map: {:?}", twin.slot_map);
                         }
                     }
                     ActorMessage::Command => {

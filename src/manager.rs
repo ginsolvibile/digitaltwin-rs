@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 use thiserror::Error as ThisError;
-use tokio;
 use tokio::sync::mpsc;
 use tokio::task;
 
@@ -57,7 +56,7 @@ impl Manager {
                 continue;
             }
             debug!("Processing file: {:?}", path.display());
-            if let Some(reader) = File::open(&path).map(BufReader::new).ok() {
+            if let Ok(reader) = File::open(&path).map(BufReader::new) {
                 let aas = AssetAdministrationShell::from_reader(reader)
                     .map_err(|e| Error::GenericError(e.to_string()))?;
                 trace!("{:#?}", aas);

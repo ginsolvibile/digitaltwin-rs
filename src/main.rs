@@ -1,3 +1,4 @@
+use clap::Parser;
 use log::info;
 use tokio::join;
 
@@ -6,12 +7,20 @@ mod manager;
 mod models;
 mod network_receiver;
 
+#[derive(Parser)]
+struct Cli {
+    #[clap(flatten)]
+    network: network_receiver::NetworkOptions,
+}
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
+    let cli = Cli::parse();
+
     info!("Creating components");
-    let mut network_receiver = network_receiver::NetworkReceiver::new();
+    let mut network_receiver = network_receiver::NetworkReceiver::new(cli.network);
     let network_channel = network_receiver.get_channel();
     let mut manager = manager::Manager::new(network_channel);
 
