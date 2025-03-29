@@ -21,8 +21,10 @@ pub struct NetworkOptions {
 
 /// Network receiver message types
 pub enum NetworkMessage {
+    /// Register an entity to receive messages
+    Register(AssetID, mpsc::Sender<ActorMessage>),
     /// Subscribe an entity to a list of sensor/actuator IDs
-    Subscribe(AssetID, mpsc::Sender<ActorMessage>, Vec<DeviceID>),
+    Subscribe(AssetID, Vec<DeviceID>),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -35,14 +37,20 @@ struct Message {
 
 #[derive(Debug, Clone, Deserialize)]
 struct Update {
+    /// ID of the sensor/actuator
     object: DeviceID,
+    /// update value
     value: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct Command {
-    // TODO: define command structure
-    target: DeviceID,
+    /// Asset ID of the target
+    target: AssetID,
+    /// command to be executed
+    command: String,
+    /// input value (any JSON object)
+    args: serde_json::Value,
 }
 
 pub struct NetworkReceiver {
@@ -113,9 +121,19 @@ impl NetworkReceiver {
                                             }
                                         }
                                     }
-                                    if let Some (command) = message.command {
-                                        debug!("Decoded command: {command:?}");
-                                        // TODO: send command to twin actor based on command.target
+                                    if let Some (cmd) = message.command {
+                                        debug!("Decoded command: {cmd:?}");
+                                        if let Some(ch) = self.asset_channels.get(&cmd.target) {
+                                            debug!("sending command to asset {}: {cmd:?}", cmd.target);
+                                            if let Err(e) = ch.send(ActorMessage::Command(
+                                                cmd.command,
+                                                cmd.args,
+                                            )).await {
+                                                error!("failed to send command to asset {}: {e:?}", cmd.target);
+                                            }
+                                        } else {
+                                            error!("No channel found for asset ID: {}", cmd.target);
+                                        }
                                     }
                                 } else {
                                     error!("Failed to decode update from payload");
@@ -132,12 +150,16 @@ impl NetworkReceiver {
                 }
                 Some(msg) = self.recv_ch.recv() => {
                     match msg {
-                        NetworkMessage::Subscribe(src, ch, oids) => {
+                        NetworkMessage::Subscribe(src, oids) => {
                             debug!("Adding new subscriber {src} to messages from {oids:?}");
-                            self.asset_channels.insert(src.clone(), ch);
                             oids.iter().for_each(|oid| {
                                 self.subscriptions.entry(oid.clone()).or_default().push(src.clone());
                             });
+                            // TODO: warn if channel for this subscriber is missing
+                        }
+                        NetworkMessage::Register(src, ch) => {
+                            debug!("Registering new asset {src}");
+                            self.asset_channels.insert(src.clone(), ch);
                         }
                     }
                 }

@@ -10,10 +10,12 @@ pub struct On;
 pub struct Off;
 
 type DispatchMap<S> = HashMap<&'static str, fn(&LightBulb<S>, f32) -> Box<ActorStateType>>;
+type CommandMap<S> = HashMap<&'static str, fn(&LightBulb<S>, serde_json::Value) -> Box<ActorStateType>>;
 
 #[derive(Clone, Debug)]
 pub struct LightBulb<State> {
     dispatch_map: DispatchMap<State>,
+    command_map: CommandMap<State>,
     threshold: f32,
     _state: PhantomData<State>,
 }
@@ -24,6 +26,7 @@ impl<T> LightBulb<T> {
     pub fn create(threshold: f32) -> Box<ActorStateType> {
         Box::new(LightBulb {
             dispatch_map: LightBulb::<Off>::create_dispatch_map(),
+            command_map: LightBulb::<Off>::create_command_map(),
             threshold,
             _state: PhantomData::<Off>,
         })
@@ -39,6 +42,15 @@ impl ActorState for LightBulb<On> {
     fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
         match self.dispatch_map.get(slot) {
             Some(func) => func(self, value),
+            // TODO: notify error
+            None => Box::new((*self).clone()),
+        }
+    }
+
+    fn execute(&self, command: &str, arg: serde_json::Value) -> Box<ActorStateType> {
+        match self.command_map.get(command) {
+            Some(func) => func(self, arg),
+            // TODO: notify error
             None => Box::new((*self).clone()),
         }
     }
@@ -63,6 +75,12 @@ impl LightBulb<On> {
         dispatch_map.insert("CurrentPowerDraw", LightBulb::<On>::power_change);
         dispatch_map
     }
+
+    fn create_command_map() -> CommandMap<On> {
+        let mut command_map: CommandMap<On> = HashMap::new();
+        command_map.insert("SwitchOff", LightBulb::<On>::switch_off);
+        command_map
+    }
 }
 
 impl LightBulb<On> {
@@ -70,16 +88,27 @@ impl LightBulb<On> {
         if pwr < self.threshold {
             Box::new(LightBulb {
                 dispatch_map: LightBulb::<Off>::create_dispatch_map(),
+                command_map: LightBulb::<Off>::create_command_map(),
                 threshold: self.threshold,
                 _state: PhantomData::<Off>,
             })
         } else {
             Box::new(LightBulb {
                 dispatch_map: LightBulb::<On>::create_dispatch_map(),
+                command_map: LightBulb::<On>::create_command_map(),
                 threshold: self.threshold,
                 _state: PhantomData::<On>,
             })
         }
+    }
+
+    fn switch_off(&self, _arg: serde_json::Value) -> Box<ActorStateType> {
+        Box::new(LightBulb {
+            dispatch_map: LightBulb::<Off>::create_dispatch_map(),
+            command_map: LightBulb::<Off>::create_command_map(),
+            threshold: self.threshold,
+            _state: PhantomData::<Off>,
+        })
     }
 }
 
@@ -88,6 +117,15 @@ impl ActorState for LightBulb<Off> {
     fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
         match self.dispatch_map.get(slot) {
             Some(func) => func(self, value),
+            // TODO: notify error
+            None => Box::new((*self).clone()),
+        }
+    }
+
+    fn execute(&self, command: &str, arg: serde_json::Value) -> Box<ActorStateType> {
+        match self.command_map.get(command) {
+            Some(func) => func(self, arg),
+            // TODO: notify error
             None => Box::new((*self).clone()),
         }
     }
@@ -112,6 +150,12 @@ impl LightBulb<Off> {
         dispatch_map.insert("CurrentPowerDraw", LightBulb::<Off>::power_change);
         dispatch_map
     }
+
+    fn create_command_map() -> CommandMap<Off> {
+        let mut command_map: CommandMap<Off> = HashMap::new();
+        command_map.insert("SwitchOn", LightBulb::<Off>::switch_on);
+        command_map
+    }
 }
 
 impl LightBulb<Off> {
@@ -119,16 +163,27 @@ impl LightBulb<Off> {
         if pwr >= self.threshold {
             Box::new(LightBulb {
                 dispatch_map: LightBulb::<On>::create_dispatch_map(),
+                command_map: LightBulb::<On>::create_command_map(),
                 threshold: self.threshold,
                 _state: PhantomData::<On>,
             })
         } else {
             Box::new(LightBulb {
                 dispatch_map: LightBulb::<Off>::create_dispatch_map(),
+                command_map: LightBulb::<Off>::create_command_map(),
                 threshold: self.threshold,
                 _state: PhantomData::<Off>,
             })
         }
+    }
+
+    fn switch_on(&self, _arg: serde_json::Value) -> Box<ActorStateType> {
+        Box::new(LightBulb {
+            dispatch_map: LightBulb::<On>::create_dispatch_map(),
+            command_map: LightBulb::<On>::create_command_map(),
+            threshold: self.threshold,
+            _state: PhantomData::<On>,
+        })
     }
 }
 

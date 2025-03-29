@@ -49,6 +49,9 @@ enum Action {
         /// Target for command (e.g., "urn:aas:smart-home:light:light-bulb:id-000001")
         #[arg(long)]
         target: String,
+        /// Arguments for command, as a JSON object (e.g., {"brightness": 0.5})
+        #[arg(long)]
+        args: Option<String>,
     },
 }
 
@@ -64,10 +67,11 @@ fn main() {
             });
             message_obj.insert("update".to_string(), update_obj);
         }
-        Action::Command { cmd: command, target } => {
+        Action::Command { cmd: command, target, args } => {
             let command_obj = json!({
                 "command": command,
-                "target": target
+                "target": target,
+                "args": json!(args.unwrap_or_else(|| "{}".to_string())),
             });
             message_obj.insert("command".to_string(), command_obj);
         }

@@ -13,8 +13,8 @@ use crate::network_receiver::NetworkMessage;
 pub enum ActorMessage {
     /// Change the value of an input slot
     InputChange(DeviceID, f32),
-    /// Command TODO: define command types
-    Command,
+    /// Execute a command
+    Command(String, serde_json::Value),
 }
 
 pub struct TwinActor {
@@ -68,9 +68,19 @@ impl TwinActor {
     }
 
     pub async fn init(&mut self) {
+        // Register the actor with the manager
         let _ = self
             .manager_ch
             .send(ManagerMessage::Register(self.id(), self.send_ch.clone()))
+            .await;
+
+        // Register the actor with the network receiver
+        let _ = self
+            .network_ch
+            .send(NetworkMessage::Register(
+                self.id(),
+                self.send_ch.clone(),
+            ))
             .await;
 
         for s in self.slots.iter() {
@@ -93,11 +103,11 @@ impl TwinActor {
             info!("No sensor IDs found for {}", self.id());
             return;
         }
+        // Subscribe to the input sensors
         let _ = self
             .network_ch
             .send(NetworkMessage::Subscribe(
                 self.id(),
-                self.send_ch.clone(),
                 sensor_ids,
             ))
             .await;
@@ -113,17 +123,18 @@ pub async fn body(mut twin: Box<TwinActor>) {
                 match msg {
                     ActorMessage::InputChange(obj_id, value) => {
                         if let Some(slot) = twin.slot_map.get(&obj_id) {
-                            debug!("Received input change: {} = {}", slot, value);
+                            debug!("{} Received input change: {} = {}", twin.id(), slot, value);
                             twin.inner_state = twin.inner_state.input_change(slot, value);
-                            debug!("New state: {:?}", twin.inner_state);
+                            debug!("{} New state: {:?}", twin.id(), twin.inner_state);
                         } else {
-                            warn!("Received input change from unknown object: {}", obj_id);
-                            debug!("current slot map: {:?}", twin.slot_map);
+                            warn!("{} Received input change from unknown object: {}", twin.id(), obj_id);
+                            debug!("{} current slot map: {:?}", twin.id(), twin.slot_map);
                         }
                     }
-                    ActorMessage::Command => {
-                        debug!("Received command");
-                        // TODO: dispatch commands
+                    ActorMessage::Command(command, args) => {
+                        debug!("{} Received command {command} with args {args:?}", twin.id());
+                        twin.inner_state = twin.inner_state.execute(&command, args);
+                        debug!("{} New state: {:?}", twin.id(), twin.inner_state);
                     }
                 }
             }

@@ -1,8 +1,13 @@
 pub type ActorStateType = dyn ActorState + Send + Sync + 'static;
 
 pub trait ActorState {
+    /// Handle the change of an input slot
     fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType>;
-    // TODO: execute(&self, command: &str) -> Box<ActorStateType>;
+    /// Execute a command
+    fn execute(&self, command: &str, input: serde_json::Value) -> Box<ActorStateType>;
+
+    // Helper functions
+
     fn as_any(&self) -> &dyn std::any::Any;
     fn type_name(&self) -> String;
     fn state(&self) -> String;

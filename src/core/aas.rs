@@ -66,8 +66,6 @@ pub struct Operation {
     /// Output variables: for example, a resulting status or a confirmation message.
     #[serde(default)]
     pub output_variables: Vec<OperationVariable>,
-    // TODO In a real implementation, we could store the function/handler here
-    // or reference a service endpoint that executes the operation.
 }
 
 /// Represents an event, such as "ChargingStarted" or "LowBatteryAlert".
