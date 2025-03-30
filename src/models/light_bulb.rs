@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use crate::core::{ActorState, ActorStateType};
+use crate::core::{ActorState, ActorStateType, StateBehavior};
+use crate::{define_state_maps, impl_actor_state};
 
 // Light bulb states
 #[derive(Clone, Debug)]
@@ -12,6 +13,7 @@ pub struct Off;
 /// The default state of the light bulb
 pub type LightBulbDefault = LightBulb<Off>;
 
+// Define dispatch and command map types specific to LightBulb
 type DispatchMap<S> = HashMap<&'static str, fn(&LightBulb<S>, f32) -> Box<ActorStateType>>;
 type CommandMap<S> = HashMap<&'static str, fn(&LightBulb<S>, serde_json::Value) -> Box<ActorStateType>>;
 
@@ -23,112 +25,30 @@ pub struct LightBulb<State> {
     _state: PhantomData<State>,
 }
 
-// Define a macro for implementing ActorState trait
-macro_rules! impl_actor_state {
-    ($actor:ident, $state:ty, $state_name:expr) => {
-        impl ActorState for $actor<$state> {
-            fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
-                match self.dispatch_map.get(slot) {
-                    Some(func) => func(self, value),
-                    // TODO: notify error
-                    None => Box::new((*self).clone()),
-                }
-            }
-
-            fn execute(&self, command: &str, arg: serde_json::Value) -> Box<ActorStateType> {
-                match self.command_map.get(command) {
-                    Some(func) => func(self, arg),
-                    // TODO: notify error
-                    None => Box::new((*self).clone()),
-                }
-            }
-
-            fn state(&self) -> String {
-                $state_name.to_string()
-            }
-
-            fn type_name(&self) -> String {
-                stringify!($actor).to_string()
-            }
-
-            fn as_any(&self) -> &dyn std::any::Any {
-                self
-            }
-        }
-    };
-}
-
-// Define a macro for dispatch and command maps
-macro_rules! define_state_maps {
-    ($actor:ident, $state:ty, $dispatch_entries:expr, $command_entries:expr) => {
-        impl $actor<$state> {
-            fn create_dispatch_map() -> DispatchMap<$state> {
-                let mut dispatch_map: DispatchMap<$state> = HashMap::new();
-                for (slot, handler) in $dispatch_entries {
-                    dispatch_map.insert(slot, handler);
-                }
-                dispatch_map
-            }
-
-            fn create_command_map() -> CommandMap<$state> {
-                let mut command_map: CommandMap<$state> = HashMap::new();
-                for (cmd, handler) in $command_entries {
-                    command_map.insert(cmd, handler);
-                }
-                command_map
-            }
-        }
-    };
-}
-
-pub trait StateBehavior {
-    fn create_dispatch_map() -> DispatchMap<Self>
-    where
-        Self: Sized;
-    fn create_command_map() -> CommandMap<Self>
-    where
-        Self: Sized;
-}
-
-impl StateBehavior for On {
-    fn create_dispatch_map() -> DispatchMap<Self> {
-        let mut dispatch_map: DispatchMap<Self> = HashMap::new();
-        dispatch_map.insert("CurrentPowerDraw", LightBulb::<On>::power_change);
-        dispatch_map
-    }
-
-    fn create_command_map() -> CommandMap<Self> {
-        let mut command_map: CommandMap<Self> = HashMap::new();
-        command_map.insert("SwitchOff", LightBulb::<On>::switch_off);
-        command_map
-    }
-}
-
-impl StateBehavior for Off {
-    fn create_dispatch_map() -> DispatchMap<Self> {
-        let mut dispatch_map: DispatchMap<Self> = HashMap::new();
-        dispatch_map.insert("CurrentPowerDraw", LightBulb::<Off>::power_change);
-        dispatch_map
-    }
-
-    fn create_command_map() -> CommandMap<Self> {
-        let mut command_map: CommandMap<Self> = HashMap::new();
-        command_map.insert("SwitchOn", LightBulb::<Off>::switch_on);
-        command_map
-    }
-}
-
-impl<T> LightBulb<T>
+impl<State> LightBulb<State>
 where
-    T: StateBehavior + Send + Sync + 'static,
-    LightBulb<T>: ActorState,
+    State: Send + Sync + 'static,
+    LightBulb<State>: ActorState,
 {
     pub fn create(threshold: f32) -> Box<ActorStateType> {
         Box::new(LightBulb {
+            dispatch_map: Off::create_dispatch_map(),
+            command_map: Off::create_command_map(),
+            threshold,
+            _state: PhantomData::<_>,
+        })
+    }
+
+    fn transition<T>(&self) -> Box<ActorStateType>
+    where
+        LightBulb<T>: ActorState,
+        T: StateBehavior<Actor = LightBulb<T>> + Send + Sync + 'static,
+    {
+        Box::new(LightBulb {
             dispatch_map: T::create_dispatch_map(),
             command_map: T::create_command_map(),
-            threshold,
-            _state: PhantomData::<T>,
+            threshold: self.threshold,
+            _state: PhantomData::<_>,
         })
     }
 
@@ -137,7 +57,7 @@ where
     }
 }
 
-// Apply the macro for ActorState implementation - updated with actor type parameter
+// Apply the macro for ActorState implementation
 impl_actor_state!(LightBulb, On, "On");
 impl_actor_state!(LightBulb, Off, "Off");
 
@@ -155,34 +75,6 @@ define_state_maps!(
     [("CurrentPowerDraw", LightBulb::<Off>::power_change)],
     [("SwitchOn", LightBulb::<Off>::switch_on)]
 );
-
-impl LightBulb<On> {
-    fn transition<T: Send + Sync>(&self) -> Box<ActorStateType>
-    where
-        LightBulb<T>: ActorState,
-    {
-        Box::new(LightBulb {
-            dispatch_map: LightBulb::<On>::create_dispatch_map(),
-            command_map: LightBulb::<On>::create_command_map(),
-            threshold: self.threshold,
-            _state: PhantomData::<_>,
-        })
-    }
-}
-
-impl LightBulb<Off> {
-    fn transition<T: Send + Sync>(&self) -> Box<ActorStateType>
-    where
-        LightBulb<T>: ActorState,
-    {
-        Box::new(LightBulb {
-            dispatch_map: LightBulb::<Off>::create_dispatch_map(),
-            command_map: LightBulb::<Off>::create_command_map(),
-            threshold: self.threshold,
-            _state: PhantomData::<_>,
-        })
-    }
-}
 
 impl LightBulb<On> {
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
