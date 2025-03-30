@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use crate::core::ActorStateType;
 use crate::core::{AssetAdministrationShell, AssetID, DeviceID};
 use crate::manager::ManagerMessage;
-use crate::models::LightBulb;
+use crate::models::LightBulbDefault;
 use crate::network_receiver::NetworkMessage;
 
 /// Actor message types
@@ -39,15 +39,15 @@ impl TwinActor {
     ) -> Self {
         let object_type = aas.id.split(':').nth(3).unwrap(); // FIXME: unwrap
         let inner_state = match object_type {
-            "light" => LightBulb::<()>::create(0.5),
-            "ev" => LightBulb::<()>::create(0.5),
-            "charging-station" => LightBulb::<()>::create(0.5),
+            "light" => LightBulbDefault::create(0.5),
+            "ev" => LightBulbDefault::create(0.5),
+            "charging-station" => LightBulbDefault::create(0.5),
             _ => panic!("Unknown object type: {}", object_type),
         };
         let slots = match object_type {
-            "light" => LightBulb::<()>::slots(),
-            "ev" => LightBulb::<()>::slots(),
-            "charging-station" => LightBulb::<()>::slots(),
+            "light" => LightBulbDefault::slots(),
+            "ev" => LightBulbDefault::slots(),
+            "charging-station" => LightBulbDefault::slots(),
             _ => panic!("Unknown object type: {}", object_type),
         };
         let (send_ch, recv_ch) = mpsc::channel(5);
