@@ -22,19 +22,24 @@ impl std::fmt::Debug for Box<ActorStateType> {
 
 // Define a trait for state behaviors - must be implemented by state types
 pub trait StateBehavior {
-    // The actor type that uses this state
+    /// The actor type that uses this state
     type Actor;
 
-    // Create dispatch and command maps
-    fn create_dispatch_map() -> HashMap<&'static str, fn(&Self::Actor, f32) -> Box<ActorStateType>>;
-    fn create_command_map(
-    ) -> HashMap<&'static str, fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>>;
+    /// Create the update dispatch map
+    fn create_dispatch_map() -> DispatchMap<Self::Actor>;
+    /// Create the command dispatch map
+    fn create_command_map() -> CommandMap<Self::Actor>;
 }
 
-// Define a macro for implementing ActorState trait
+/// The dispatch map associates input slots (strings) with their handlers
+pub type DispatchMap<A> = HashMap<&'static str, fn(&A, f32) -> Box<ActorStateType>>;
+/// The command map associates commands (strings) with their handlers
+pub type CommandMap<A> = HashMap<&'static str, fn(&A, serde_json::Value) -> Box<ActorStateType>>;
+
+/// Implement the ActorState trait boilerplate for a given actor and state.
 #[macro_export]
 macro_rules! impl_actor_state {
-    ($actor:ident, $state:ty, $state_name:expr) => {
+    ($actor:ident, $state:ty) => {
         impl ActorState for $actor<$state> {
             fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
                 match self.dispatch_map.get(slot) {
@@ -53,7 +58,7 @@ macro_rules! impl_actor_state {
             }
 
             fn state(&self) -> String {
-                $state_name.to_string()
+                stringify!($state).to_string()
             }
 
             fn type_name(&self) -> String {
@@ -67,13 +72,29 @@ macro_rules! impl_actor_state {
     };
 }
 
+/// Define input and command maps given the actor and state types.
+/// This macro generates the necessary code to create the input and command maps for the specified actor and state.
+/// Syntax:
+/// ```
+///     define_state_maps!(
+///         ActorType,
+///         StateType,
+///         [
+///             ("InputVarName", input_handler),
+///             ...
+///         ],
+///         [
+///             ("CommandName", command_handler),
+///             ...
+///         ]);
+/// ```
 #[macro_export]
 macro_rules! define_state_maps {
     ($actor:ident, $state:ty, [$(($d_slot:expr, $d_handler:expr)),*], [$(($c_slot:expr, $c_handler:expr)),*]) => {
         impl StateBehavior for $state {
             type Actor = $actor<$state>;
-            
-            fn create_dispatch_map() -> HashMap<&'static str, fn(&Self::Actor, f32) -> Box<ActorStateType>> {
+
+            fn create_dispatch_map() -> DispatchMap<Self::Actor> {
                 let mut dispatch_map = HashMap::new();
                 $(
                     dispatch_map.insert($d_slot, $d_handler as fn(&Self::Actor, f32) -> Box<ActorStateType>);
@@ -81,12 +102,24 @@ macro_rules! define_state_maps {
                 dispatch_map
             }
 
-            fn create_command_map() -> HashMap<&'static str, fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>> {
+            fn create_command_map() -> CommandMap<Self::Actor> {
                 let mut command_map = HashMap::new();
                 $(
                     command_map.insert($c_slot, $c_handler as fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>);
                 )*
                 command_map
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! declare_slots {
+    ($actor:ident, [$($d_slot:expr),*]) => {
+        impl<State> $actor<State>
+        {
+            pub fn slots() -> Vec<&'static str> {
+                vec![$($d_slot),*]
             }
         }
     };

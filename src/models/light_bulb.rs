@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use crate::core::{ActorState, ActorStateType, StateBehavior};
-use crate::{define_state_maps, impl_actor_state};
+use crate::core::{ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
+use crate::{declare_slots, define_state_maps, impl_actor_state};
 
 // Light bulb states
 #[derive(Clone, Debug)]
@@ -13,15 +13,11 @@ pub struct Off;
 /// The default state of the light bulb
 pub type LightBulbDefault = LightBulb<Off>;
 
-// Define dispatch and command map types specific to LightBulb
-type DispatchMap<S> = HashMap<&'static str, fn(&LightBulb<S>, f32) -> Box<ActorStateType>>;
-type CommandMap<S> = HashMap<&'static str, fn(&LightBulb<S>, serde_json::Value) -> Box<ActorStateType>>;
-
 #[derive(Clone, Debug)]
 pub struct LightBulb<State> {
-    dispatch_map: DispatchMap<State>,
-    command_map: CommandMap<State>,
     threshold: f32,
+    dispatch_map: DispatchMap<LightBulb<State>>,
+    command_map: CommandMap<LightBulb<State>>,
     _state: PhantomData<State>,
 }
 
@@ -30,38 +26,43 @@ where
     State: Send + Sync + 'static,
     LightBulb<State>: ActorState,
 {
+    /// Create the default instance of a LightBulb actor
     pub fn create(threshold: f32) -> Box<ActorStateType> {
         Box::new(LightBulb {
+            threshold,
             dispatch_map: Off::create_dispatch_map(),
             command_map: Off::create_command_map(),
-            threshold,
             _state: PhantomData::<_>,
         })
     }
 
+    /// The `transition` method returns a new instance of the actor with the specified state,
+    /// inheriting the actor's properties.
     fn transition<T>(&self) -> Box<ActorStateType>
     where
         LightBulb<T>: ActorState,
         T: StateBehavior<Actor = LightBulb<T>> + Send + Sync + 'static,
     {
         Box::new(LightBulb {
+            threshold: self.threshold,
             dispatch_map: T::create_dispatch_map(),
             command_map: T::create_command_map(),
-            threshold: self.threshold,
             _state: PhantomData::<_>,
         })
-    }
-
-    pub fn slots() -> Vec<&'static str> {
-        vec!["CurrentPowerDraw"]
     }
 }
 
 // Apply the macro for ActorState implementation
-impl_actor_state!(LightBulb, On, "On");
-impl_actor_state!(LightBulb, Off, "Off");
+impl_actor_state!(LightBulb, On);
+impl_actor_state!(LightBulb, Off);
 
-// Apply the macro for dispatch and command maps
+// Declare inputs variables for the LightBulb actor
+declare_slots!(
+    LightBulb,
+    ["CurrentPowerDraw"]
+);
+
+// define handlers for each input slot in the On state
 define_state_maps!(
     LightBulb,
     On,
@@ -69,6 +70,7 @@ define_state_maps!(
     [("SwitchOff", LightBulb::<On>::switch_off)]
 );
 
+// define handlers for each input slot in the Off state
 define_state_maps!(
     LightBulb,
     Off,
@@ -76,6 +78,7 @@ define_state_maps!(
     [("SwitchOn", LightBulb::<Off>::switch_on)]
 );
 
+// Input and command handlers for the On state
 impl LightBulb<On> {
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
         if pwr < self.threshold {
@@ -90,6 +93,7 @@ impl LightBulb<On> {
     }
 }
 
+// Input and command handlers for the Off state
 impl LightBulb<Off> {
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
         if pwr >= self.threshold {
