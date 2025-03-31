@@ -4,5 +4,5 @@ pub mod twin_actor;
 pub mod types;
 
 pub use aas::AssetAdministrationShell;
-pub use actor_state::{ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
+pub use actor_state::{ActorFactory, ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
 pub use types::{AssetID, DeviceID};

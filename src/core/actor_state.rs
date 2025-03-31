@@ -20,7 +20,14 @@ impl std::fmt::Debug for Box<ActorStateType> {
     }
 }
 
-// Define a trait for state behaviors - must be implemented by state types
+/// Factory trait for creating actors. Each Actor type must implement this trait
+/// to provide a default instance and a way to create instances with parameters.
+pub trait ActorFactory {
+    fn create_default() -> (Box<ActorStateType>, Vec<&'static str>);
+    fn create_with_params(params: serde_json::Value) -> (Box<ActorStateType>, Vec<&'static str>);
+}
+
+/// State behavior trait for providing the input and command handler dispatch maps.
 pub trait StateBehavior {
     /// The actor type that uses this state
     type Actor;

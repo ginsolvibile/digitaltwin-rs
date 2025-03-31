@@ -2,10 +2,10 @@ use log::{debug, info, warn};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-use crate::core::ActorStateType;
+use crate::core::{ActorFactory, ActorStateType};
 use crate::core::{AssetAdministrationShell, AssetID, DeviceID};
 use crate::manager::ManagerMessage;
-use crate::models::LightBulbDefault;
+use crate::models::{ChargingStationFactory, LightBulbFactory};
 use crate::network_receiver::NetworkMessage;
 
 /// Actor message types
@@ -38,18 +38,13 @@ impl TwinActor {
         network_ch: mpsc::Sender<NetworkMessage>,
     ) -> Self {
         let object_type = aas.id.split(':').nth(3).unwrap(); // FIXME: unwrap
-        let inner_state = match object_type {
-            "light" => LightBulbDefault::create(0.5),
-            "ev" => LightBulbDefault::create(0.5),
-            "charging-station" => LightBulbDefault::create(0.5),
+        let (inner_state, slots) = match object_type {
+            "light" => LightBulbFactory::create_default(),
+            "ev" => LightBulbFactory::create_default(),
+            "charging-station" => ChargingStationFactory::create_default(),
             _ => panic!("Unknown object type: {}", object_type),
         };
-        let slots = match object_type {
-            "light" => LightBulbDefault::slots(),
-            "ev" => LightBulbDefault::slots(),
-            "charging-station" => LightBulbDefault::slots(),
-            _ => panic!("Unknown object type: {}", object_type),
-        };
+
         let (send_ch, recv_ch) = mpsc::channel(5);
         TwinActor {
             aas,
@@ -77,10 +72,7 @@ impl TwinActor {
         // Register the actor with the network receiver
         let _ = self
             .network_ch
-            .send(NetworkMessage::Register(
-                self.id(),
-                self.send_ch.clone(),
-            ))
+            .send(NetworkMessage::Register(self.id(), self.send_ch.clone()))
             .await;
 
         for s in self.slots.iter() {
@@ -106,10 +98,7 @@ impl TwinActor {
         // Subscribe to the input sensors
         let _ = self
             .network_ch
-            .send(NetworkMessage::Subscribe(
-                self.id(),
-                sensor_ids,
-            ))
+            .send(NetworkMessage::Subscribe(self.id(), sensor_ids))
             .await;
     }
 }

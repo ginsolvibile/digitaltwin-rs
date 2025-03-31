@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use crate::core::{ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
+use crate::core::{ActorFactory, ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
 use crate::{declare_slots, define_state_maps, impl_actor_state};
 
 // Light bulb states
@@ -10,8 +10,25 @@ pub struct On;
 #[derive(Clone, Debug)]
 pub struct Off;
 
-/// The default state of the light bulb
-pub type LightBulbDefault = LightBulb<Off>;
+/// Factory for creating LightBulb actors
+pub struct LightBulbFactory;
+impl ActorFactory for LightBulbFactory {
+    fn create_default() -> (Box<ActorStateType>, Vec<&'static str>) {
+        (
+            LightBulb::<Off>::create(0.5),
+            LightBulb::<Off>::slots(),
+        )
+    }
+    
+    fn create_with_params(params: serde_json::Value) -> (Box<ActorStateType>, Vec<&'static str>) {
+        let threshold = params.get("threshold")
+            .and_then(|v| v.as_f64())
+            .map(|v| v as f32)
+            .unwrap_or(0.5);
+            
+        (LightBulb::<Off>::create(threshold), LightBulb::<Off>::slots())
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct LightBulb<State> {
