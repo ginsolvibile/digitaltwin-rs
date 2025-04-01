@@ -49,7 +49,10 @@ pub type CommandMap<A> = HashMap<&'static str, fn(&A, serde_json::Value) -> Box<
 #[macro_export]
 macro_rules! impl_actor_state {
     ($actor:ident) => {
-        impl<S> ActorState for $actor<S> where S: StateBehavior + Clone + Send + Sync + 'static {
+        impl<S> ActorState for $actor<S>
+        where
+            S: StateBehavior + Clone + Send + Sync + 'static,
+        {
             fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
                 match self.dispatch_map.get(slot) {
                     Some(func) => func(self, value),

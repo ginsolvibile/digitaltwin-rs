@@ -14,18 +14,16 @@ pub struct Off;
 pub struct LightBulbFactory;
 impl ActorFactory for LightBulbFactory {
     fn create_default() -> (Box<ActorStateType>, Vec<&'static str>) {
-        (
-            LightBulb::<Off>::create(0.5),
-            LightBulb::<Off>::slots(),
-        )
+        (LightBulb::<Off>::create(0.5), LightBulb::<Off>::slots())
     }
-    
+
     fn create_with_params(params: serde_json::Value) -> (Box<ActorStateType>, Vec<&'static str>) {
-        let threshold = params.get("threshold")
+        let threshold = params
+            .get("threshold")
             .and_then(|v| v.as_f64())
             .map(|v| v as f32)
             .unwrap_or(0.5);
-            
+
         (LightBulb::<Off>::create(threshold), LightBulb::<Off>::slots())
     }
 }
@@ -73,10 +71,7 @@ where
 impl_actor_state!(LightBulb);
 
 // Declare inputs variables for the LightBulb actor
-declare_slots!(
-    LightBulb,
-    ["CurrentPowerDraw"]
-);
+declare_slots!(LightBulb, ["CurrentPowerDraw"]);
 
 // define handlers for each input slot in the On state
 define_state_maps!(

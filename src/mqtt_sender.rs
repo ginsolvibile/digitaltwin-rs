@@ -67,7 +67,11 @@ fn main() {
             });
             message_obj.insert("update".to_string(), update_obj);
         }
-        Action::Command { cmd: command, target, args } => {
+        Action::Command {
+            cmd: command,
+            target,
+            args,
+        } => {
             let command_obj = json!({
                 "command": command,
                 "target": target,
