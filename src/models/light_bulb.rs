@@ -70,8 +70,7 @@ where
 }
 
 // Apply the macro for ActorState implementation
-impl_actor_state!(LightBulb, On);
-impl_actor_state!(LightBulb, Off);
+impl_actor_state!(LightBulb);
 
 // Declare inputs variables for the LightBulb actor
 declare_slots!(

@@ -36,6 +36,8 @@ pub trait StateBehavior {
     fn create_dispatch_map() -> DispatchMap<Self::Actor>;
     /// Create the command dispatch map
     fn create_command_map() -> CommandMap<Self::Actor>;
+
+    fn state_name() -> String;
 }
 
 /// The dispatch map associates input slots (strings) with their handlers
@@ -43,11 +45,11 @@ pub type DispatchMap<A> = HashMap<&'static str, fn(&A, f32) -> Box<ActorStateTyp
 /// The command map associates commands (strings) with their handlers
 pub type CommandMap<A> = HashMap<&'static str, fn(&A, serde_json::Value) -> Box<ActorStateType>>;
 
-/// Implement the ActorState trait boilerplate for a given actor and state.
+/// Implement the ActorState trait boilerplate for a given actor.
 #[macro_export]
 macro_rules! impl_actor_state {
-    ($actor:ident, $state:ty) => {
-        impl ActorState for $actor<$state> {
+    ($actor:ident) => {
+        impl<S> ActorState for $actor<S> where S: StateBehavior + Clone + Send + Sync + 'static {
             fn input_change(&self, slot: &str, value: f32) -> Box<ActorStateType> {
                 match self.dispatch_map.get(slot) {
                     Some(func) => func(self, value),
@@ -65,7 +67,7 @@ macro_rules! impl_actor_state {
             }
 
             fn state(&self) -> String {
-                stringify!($state).to_string()
+                S::state_name()
             }
 
             fn type_name(&self) -> String {
@@ -115,6 +117,10 @@ macro_rules! define_state_maps {
                     command_map.insert($c_slot, $c_handler as fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>);
                 )*
                 command_map
+            }
+
+            fn state_name() -> String {
+                stringify!($state).to_string()
             }
         }
     };
