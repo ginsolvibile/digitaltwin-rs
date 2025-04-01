@@ -20,8 +20,9 @@ pub enum ActorMessage {
 pub struct TwinActor {
     /// The AAS for this Digital Twin
     aas: AssetAdministrationShell,
+    /// The actor's internal state
     inner_state: Box<ActorStateType>,
-    /// List of slots that the DT state will listen to
+    /// All the slots the actor will listen to (used only during initialization)
     slots: Vec<&'static str>,
     /// Mapping of sensor IDs to slot names
     slot_map: HashMap<DeviceID, String>,
@@ -76,6 +77,7 @@ impl TwinActor {
             .await;
 
         for s in self.slots.iter() {
+            // Create an input slot for each reference to the DataSource subsystem found in the PowerAndElectrical submodel
             if let Some(sensor) = self
                 .aas
                 .find_reference_value_in_collection("PowerAndElectrical", s, "DataSource")
@@ -88,6 +90,7 @@ impl TwinActor {
         }
         debug!("Slot map for {} is: {:?}", self.id(), self.slot_map);
 
+        // Subscribe to any sensor IDs found in the AAS in the IoTDataSources submodel under Sensors
         let sensor_ids = self
             .aas
             .find_elements_in_collection("IoTDataSources", "Sensors", "SensorID");

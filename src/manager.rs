@@ -6,7 +6,7 @@ use thiserror::Error as ThisError;
 use tokio::sync::mpsc;
 use tokio::task;
 
-use crate::core::{twin_actor, AssetAdministrationShell};
+use crate::core::{twin_actor, AssetAdministrationShell, AssetID};
 use crate::network_receiver;
 
 #[derive(ThisError, Debug)]
@@ -23,11 +23,11 @@ pub enum ManagerMessage {
     /// Initialize the manager (sent by the main function)
     Initialize,
     /// Register a new actor (sent by an actor)
-    Register(String, mpsc::Sender<twin_actor::ActorMessage>),
+    Register(AssetID, mpsc::Sender<twin_actor::ActorMessage>),
 }
 
 pub struct Manager {
-    actors: HashMap<String, mpsc::Sender<twin_actor::ActorMessage>>,
+    actors: HashMap<AssetID, mpsc::Sender<twin_actor::ActorMessage>>,
     send_ch: mpsc::Sender<ManagerMessage>,
     recv_ch: mpsc::Receiver<ManagerMessage>,
     network_ch: mpsc::Sender<network_receiver::NetworkMessage>,
