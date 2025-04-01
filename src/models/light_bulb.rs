@@ -82,16 +82,16 @@ declare_slots!(
 define_state_maps!(
     LightBulb,
     On,
-    [("CurrentPowerDraw", LightBulb::<On>::power_change)],
-    [("SwitchOff", LightBulb::<On>::switch_off)]
+    [("CurrentPowerDraw", power_change)],
+    [("SwitchOff", switch_off)]
 );
 
 // define handlers for each input slot in the Off state
 define_state_maps!(
     LightBulb,
     Off,
-    [("CurrentPowerDraw", LightBulb::<Off>::power_change)],
-    [("SwitchOn", LightBulb::<Off>::switch_on)]
+    [("CurrentPowerDraw", power_change)],
+    [("SwitchOn", switch_on)]
 );
 
 // Input and command handlers for the On state

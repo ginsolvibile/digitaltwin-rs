@@ -99,14 +99,14 @@ macro_rules! impl_actor_state {
 /// ```
 #[macro_export]
 macro_rules! define_state_maps {
-    ($actor:ident, $state:ty, [$(($d_slot:expr, $d_handler:expr)),*], [$(($c_slot:expr, $c_handler:expr)),*]) => {
+    ($actor:ident, $state:ty, [$(($d_slot:expr, $d_handler:ident)),*], [$(($c_slot:expr, $c_handler:ident)),*]) => {
         impl StateBehavior for $state {
             type Actor = $actor<$state>;
 
             fn create_dispatch_map() -> DispatchMap<Self::Actor> {
                 let mut dispatch_map = HashMap::new();
                 $(
-                    dispatch_map.insert($d_slot, $d_handler as fn(&Self::Actor, f32) -> Box<ActorStateType>);
+                    dispatch_map.insert($d_slot, $actor::<$state>::$d_handler as fn(&Self::Actor, f32) -> Box<ActorStateType>);
                 )*
                 dispatch_map
             }
@@ -114,7 +114,7 @@ macro_rules! define_state_maps {
             fn create_command_map() -> CommandMap<Self::Actor> {
                 let mut command_map = HashMap::new();
                 $(
-                    command_map.insert($c_slot, $c_handler as fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>);
+                    command_map.insert($c_slot, $actor::<$state>::$c_handler as fn(&Self::Actor, serde_json::Value) -> Box<ActorStateType>);
                 )*
                 command_map
             }
