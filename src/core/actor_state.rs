@@ -140,3 +140,131 @@ macro_rules! declare_slots {
         }
     };
 }
+
+
+/// Define an actor with its properties and default state.
+/// This macro generates the necessary code to create the actor with the specified properties.
+/// Syntax:
+/// ```
+///     define_actor!(
+///         ActorType {
+///             prop_name: prop_type = default_value,
+///             ...
+///         },
+///         DefaultStateType
+///     );
+/// ```
+#[macro_export]
+macro_rules! define_actor {
+    (
+        // Actor name and parameters
+        $actor:ident {
+            // Actor-specific properties
+            $(
+                $prop_name:ident: $prop_type:ty = $default:expr,
+            )*
+        },
+        $dflt_state:ty
+    ) => {
+        #[derive(Clone, Debug)]
+        pub struct $actor<State> {
+            // Actor-specific properties
+            $(
+                $prop_name: $prop_type,
+            )*
+            // Generic actor properties
+            dispatch_map: DispatchMap<$actor<State>>,
+            command_map: CommandMap<$actor<State>>,
+            _state: PhantomData<State>,
+        }
+
+        impl<State> $actor<State>
+        where
+            State: Send + Sync + 'static,
+            $actor<State>: ActorState,
+        {
+            /// Create the default instance of an actor
+            pub fn create($($prop_name: $prop_type),*) -> Box<ActorStateType> {
+                Box::new($actor {
+                    // Actor specific properties
+                    $(
+                        $prop_name,
+                    )*
+                    // Generic actor properties
+                    dispatch_map: <$dflt_state>::create_dispatch_map(),
+                    command_map: <$dflt_state>::create_command_map(),
+                    _state: PhantomData::<_>,
+                })
+            }
+
+            /// The `transition` method returns a new instance of the actor with the specified state,
+            /// inheriting the actor's properties.
+            fn transition<T>(&self) -> Box<ActorStateType>
+            where
+                $actor<T>: ActorState,
+                T: StateBehavior<Actor = $actor<T>> + Send + Sync + 'static,
+            {
+                Box::new($actor {
+                    // Actor specific properties
+                    $(
+                        $prop_name: self.$prop_name,
+                    )*
+                    // Generic actor properties
+                    dispatch_map: T::create_dispatch_map(),
+                    command_map: T::create_command_map(),
+                    _state: PhantomData::<_>,
+                })
+            }
+        }
+        
+        // Apply the macro for ActorState implementation
+        impl_actor_state!($actor);
+    };
+}
+
+/// Define an actor factory for creating instances of the actor.
+/// This macro generates the necessary code to create the actor factory.
+/// Syntax:
+/// ```
+///    define_actor_factory!(
+///        ActorType, FactoryType,
+///       DefaultStateType,
+///       (param_name: param_type = default_value),
+/// ///       ...
+///   );
+/// ```
+/// The factory type must implement the ActorFactory trait.
+#[macro_export]
+macro_rules! define_actor_factory {
+    (
+        $actor:ident, $factory:ident,
+        $state:ty,
+        $(($param_name:ident : $param_type:ty = $default:expr)),*
+    ) => {
+        pub struct $factory;
+        
+        impl ActorFactory for $factory {
+            fn create_default() -> (Box<ActorStateType>, Vec<&'static str>) {
+                (
+                    $actor::<$state>::create($($default),*),
+                    $actor::<$state>::slots(),
+                )
+            }
+            
+            fn create_with_params(params: serde_json::Value) -> (Box<ActorStateType>, Vec<&'static str>) {
+                $(
+                    let $param_name = params
+                        .get(stringify!($param_name))
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v as $param_type)
+                        .unwrap_or($default);
+                )*
+                
+                (
+                    $actor::<$state>::create($($param_name),*),
+                    $actor::<$state>::slots(),
+                )
+            }
+        }
+    };
+}

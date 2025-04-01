@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use crate::core::{ActorFactory, ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
-use crate::{declare_slots, define_state_maps, impl_actor_state};
+use crate::{declare_slots, define_actor, define_actor_factory, define_state_maps, impl_actor_state};
 
 // Light bulb states
 #[derive(Clone, Debug)]
@@ -10,65 +10,19 @@ pub struct On;
 #[derive(Clone, Debug)]
 pub struct Off;
 
-/// Factory for creating LightBulb actors
-pub struct LightBulbFactory;
-impl ActorFactory for LightBulbFactory {
-    fn create_default() -> (Box<ActorStateType>, Vec<&'static str>) {
-        (LightBulb::<Off>::create(0.5), LightBulb::<Off>::slots())
-    }
+// Define the LightBulb actor with its default state
+define_actor!(
+    LightBulb {
+        threshold: f32 = 0.5,
+    }, Off
+);
 
-    fn create_with_params(params: serde_json::Value) -> (Box<ActorStateType>, Vec<&'static str>) {
-        let threshold = params
-            .get("threshold")
-            .and_then(|v| v.as_f64())
-            .map(|v| v as f32)
-            .unwrap_or(0.5);
-
-        (LightBulb::<Off>::create(threshold), LightBulb::<Off>::slots())
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct LightBulb<State> {
-    threshold: f32,
-    dispatch_map: DispatchMap<LightBulb<State>>,
-    command_map: CommandMap<LightBulb<State>>,
-    _state: PhantomData<State>,
-}
-
-impl<State> LightBulb<State>
-where
-    State: Send + Sync + 'static,
-    LightBulb<State>: ActorState,
-{
-    /// Create the default instance of a LightBulb actor
-    pub fn create(threshold: f32) -> Box<ActorStateType> {
-        Box::new(LightBulb {
-            threshold,
-            dispatch_map: Off::create_dispatch_map(),
-            command_map: Off::create_command_map(),
-            _state: PhantomData::<_>,
-        })
-    }
-
-    /// The `transition` method returns a new instance of the actor with the specified state,
-    /// inheriting the actor's properties.
-    fn transition<T>(&self) -> Box<ActorStateType>
-    where
-        LightBulb<T>: ActorState,
-        T: StateBehavior<Actor = LightBulb<T>> + Send + Sync + 'static,
-    {
-        Box::new(LightBulb {
-            threshold: self.threshold,
-            dispatch_map: T::create_dispatch_map(),
-            command_map: T::create_command_map(),
-            _state: PhantomData::<_>,
-        })
-    }
-}
-
-// Apply the macro for ActorState implementation
-impl_actor_state!(LightBulb);
+// Factory for creating LightBulb actors
+define_actor_factory!(
+    LightBulb, LightBulbFactory, 
+    Off, 
+    (threshold: f32 = 0.5)
+);
 
 // Declare inputs variables for the LightBulb actor
 declare_slots!(LightBulb, ["CurrentPowerDraw"]);
