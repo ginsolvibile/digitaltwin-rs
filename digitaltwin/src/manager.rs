@@ -6,8 +6,9 @@ use thiserror::Error as ThisError;
 use tokio::sync::mpsc;
 use tokio::task;
 
-use crate::core::{twin_actor, AssetAdministrationShell, AssetID};
 use crate::network_receiver;
+use crate::twin_runner;
+use digitaltwin_core::{AssetAdministrationShell, AssetID};
 
 #[derive(ThisError, Debug)]
 pub enum Error {
@@ -23,11 +24,11 @@ pub enum ManagerMessage {
     /// Initialize the manager (sent by the main function)
     Initialize,
     /// Register a new actor (sent by an actor)
-    Register(AssetID, mpsc::Sender<twin_actor::ActorMessage>),
+    Register(AssetID, mpsc::Sender<twin_runner::ActorMessage>),
 }
 
 pub struct Manager {
-    actors: HashMap<AssetID, mpsc::Sender<twin_actor::ActorMessage>>,
+    actors: HashMap<AssetID, mpsc::Sender<twin_runner::ActorMessage>>,
     send_ch: mpsc::Sender<ManagerMessage>,
     recv_ch: mpsc::Receiver<ManagerMessage>,
     network_ch: mpsc::Sender<network_receiver::NetworkMessage>,
@@ -69,8 +70,8 @@ impl Manager {
                     aas.id,
                     aas.description.as_ref()
                 );
-                let twin = twin_actor::TwinActor::new(aas, self.send_ch.clone(), self.network_ch.clone());
-                task::spawn(twin_actor::body(Box::new(twin)));
+                let twin = twin_runner::TwinRunner::new(aas, self.send_ch.clone(), self.network_ch.clone());
+                task::spawn(twin_runner::body(Box::new(twin)));
             }
         }
         Ok(())

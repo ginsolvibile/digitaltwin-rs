@@ -5,8 +5,8 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-use crate::core::twin_actor::ActorMessage;
-use crate::core::{AssetID, DeviceID};
+use crate::twin_runner::ActorMessage;
+use digitaltwin_core::{AssetID, DeviceID};
 
 #[derive(Parser, Clone)]
 pub struct NetworkOptions {

@@ -2,10 +2,13 @@ use clap::Parser;
 use log::info;
 use tokio::join;
 
-mod core;
 mod manager;
 mod models;
 mod network_receiver;
+mod twin_runner;
+
+pub use digitaltwin_core::*;
+pub use digitaltwin_macros::*;
 
 #[derive(Parser)]
 struct Cli {

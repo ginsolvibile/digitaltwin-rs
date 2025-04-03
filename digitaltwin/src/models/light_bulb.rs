@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-use std::marker::PhantomData;
-
-use crate::core::{ActorFactory, ActorState, ActorStateType, CommandMap, DispatchMap, StateBehavior};
-use crate::{declare_slots, define_actor, define_actor_factory, define_state_maps, impl_actor_state};
+use digitaltwin_core::ActorStateType;
+use digitaltwin_macros::*;
 
 // Light bulb states
 #[derive(Clone, Debug)]
@@ -10,40 +7,17 @@ pub struct On;
 #[derive(Clone, Debug)]
 pub struct Off;
 
-// Define the LightBulb actor with its default state
-define_actor!(
-    LightBulb {
-        threshold: f32 = 0.5,
-    }, Off
-);
-
-// Factory for creating LightBulb actors
-define_actor_factory!(
-    LightBulb, LightBulbFactory, 
-    Off, 
-    (threshold: f32 = 0.5)
-);
-
-// Declare inputs variables for the LightBulb actor
-declare_slots!(LightBulb, ["CurrentPowerDraw"]);
-
-// define handlers for each input slot in the On state
-define_state_maps!(
-    LightBulb,
-    On,
-    [("CurrentPowerDraw", power_change)],
-    [("SwitchOff", switch_off)]
-);
-
-// define handlers for each input slot in the Off state
-define_state_maps!(
-    LightBulb,
-    Off,
-    [("CurrentPowerDraw", power_change)],
-    [("SwitchOn", switch_on)]
-);
+/// The LightBulb actor
+#[actor(default_state = "Off", slots("CurrentPowerDraw"))]
+pub struct LightBulb {
+    #[actor_attr(default = "0.5")]
+    threshold: f32,
+}
 
 // Input and command handlers for the On state
+#[actor_state(LightBulb, On)]
+#[dispatch_map("CurrentPowerDraw" = power_change)]
+#[command_map("SwitchOff" = switch_off)]
 impl LightBulb<On> {
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
         if pwr < self.threshold {
@@ -59,6 +33,9 @@ impl LightBulb<On> {
 }
 
 // Input and command handlers for the Off state
+#[actor_state(LightBulb, Off)]
+#[dispatch_map("CurrentPowerDraw" = power_change)]
+#[command_map("SwitchOn" = switch_on)]
 impl LightBulb<Off> {
     fn power_change(&self, pwr: f32) -> Box<ActorStateType> {
         if pwr >= self.threshold {

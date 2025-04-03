@@ -2,11 +2,10 @@ use log::{debug, info, warn};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-use crate::core::{ActorFactory, ActorStateType};
-use crate::core::{AssetAdministrationShell, AssetID, DeviceID};
 use crate::manager::ManagerMessage;
 use crate::models::{ChargingStationFactory, LightBulbFactory};
 use crate::network_receiver::NetworkMessage;
+use digitaltwin_core::{ActorFactory, ActorStateType, AssetAdministrationShell, AssetID, DeviceID};
 
 /// Actor message types
 #[derive(Debug, Clone)]
@@ -17,7 +16,7 @@ pub enum ActorMessage {
     Command(String, serde_json::Value),
 }
 
-pub struct TwinActor {
+pub struct TwinRunner {
     /// The AAS for this Digital Twin
     aas: AssetAdministrationShell,
     /// The actor's internal state
@@ -32,7 +31,7 @@ pub struct TwinActor {
     network_ch: mpsc::Sender<NetworkMessage>,
 }
 
-impl TwinActor {
+impl TwinRunner {
     pub fn new(
         aas: AssetAdministrationShell,
         manager_ch: mpsc::Sender<ManagerMessage>,
@@ -47,7 +46,7 @@ impl TwinActor {
         };
 
         let (send_ch, recv_ch) = mpsc::channel(5);
-        TwinActor {
+        TwinRunner {
             aas,
             inner_state,
             slots,
@@ -106,9 +105,9 @@ impl TwinActor {
     }
 }
 
-pub async fn body(mut twin: Box<TwinActor>) {
+pub async fn body(mut twin: Box<TwinRunner>) {
     twin.init().await;
-    info!("Twin actor body {} starting", twin.id());
+    info!("Twin runner body {} starting", twin.id());
     loop {
         tokio::select! {
             Some(msg) = twin.recv_ch.recv() => {
