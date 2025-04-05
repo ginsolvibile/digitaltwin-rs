@@ -52,22 +52,19 @@ impl LightBulb<Off> {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::light_bulb::{LightBulb, Off, On};
+    use super::*;
 
     #[test]
     fn test_power_change() {
         let actor = LightBulb::<Off>::create(0.5);
 
-        let actor = actor.input_change("power", 0.3);
-        println!("After power change of 0.3: {:?}", actor);
+        let actor = actor.input_change("CurrentPowerDraw", 0.3);
         assert!(actor.as_any().downcast_ref::<LightBulb<Off>>().is_some());
 
-        let actor = actor.input_change("power", 0.7);
-        println!("After power change of 0.7: {:?}", actor);
+        let actor = actor.input_change("CurrentPowerDraw", 0.7);
         assert!(actor.as_any().downcast_ref::<LightBulb<On>>().is_some());
 
-        let actor = actor.input_change("power", 0.3);
-        println!("After power change of 0.3: {:?}", actor);
+        let actor = actor.input_change("CurrentPowerDraw", 0.3);
         assert!(actor.as_any().downcast_ref::<LightBulb<Off>>().is_some());
     }
 }

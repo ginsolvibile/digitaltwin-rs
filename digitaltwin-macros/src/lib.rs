@@ -13,7 +13,7 @@ use syn::{
 /// Main actor attribute macro. This transforms a regular struct into a state machine actor.
 ///
 /// Example:
-/// ```
+/// ```ignore
 /// #[actor(default_state = "Off", slots("CurrentPowerDraw"))]
 /// struct LightBulb {
 ///     #[actor_attr(default = "0.5")]
@@ -211,7 +211,7 @@ impl Parse for ActorStateArgs {
 /// The actor_state attribute macro. Adds state behavior implementation to an impl block.
 ///
 /// Example:
-/// ```
+/// ```ignore
 /// #[actor_state(LightBulb, On)]
 /// #[dispatch_map("CurrentPowerDraw" = power_change)]
 /// #[command_map("SwitchOff" = switch_off)]

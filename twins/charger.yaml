@@ -11,10 +11,10 @@ submodels:
         value: 7.2
 
       - element_type: "collection"
-        id_short: "CurrentPowerDrawGroup"
+        id_short: "CurrentPowerDraw"
         value:
           - element_type: "property"
-            id_short: "CurrentPowerDraw"
+            id_short: "CurrentPowerValue"
             value_type: "float"
             value: 0.0
 
@@ -23,19 +23,22 @@ submodels:
             value: "urn:aas:smart-home:charging-station:datasources#SensorPowerAbsorption"
 
       - element_type: "collection"
-        id_short: "InputVoltageGroup"
+        id_short: "InputCurrent"
         value:
           - element_type: "property"
-            id_short: "InputVoltage"
+            id_short: "InputCurrentValue"
             value_type: "float"
             value: 0.0
 
           - element_type: "referenceelement"
             id_short: "DataSource"
-            value: "urn:aas:smart-home:charging-station:datasources#SensorInputVoltage"
+            value: "urn:aas:smart-home:charging-station:datasources#SensorInputCurrent"
 
       - element_type: "event"
         id_short: "OvercurrentFault"
+
+      - element_type: "event"
+        id_short: "ChargingComplete"
 
       - element_type: "operation"
         id_short: "SetChargingCurrent"
@@ -43,6 +46,21 @@ submodels:
           - name: "desired_current"
             value_type: "float"
             value: 0.0
+        output_variables: []
+
+      - element_type: "operation"
+        id_short: "VehicleDetected"
+        input_variables: []
+        output_variables: []
+
+      - element_type: "operation"
+        id_short: "VehicleDisconnected"
+        input_variables: []
+        output_variables: []
+
+      - element_type: "operation"
+        id_short: "Reset"
+        input_variables: []
         output_variables: []
 
   - id: "urn:aas:smart-home:charging-station:datasources"
@@ -64,18 +82,18 @@ submodels:
                 value_type: "string"
                 value: "PowerAbsorption"
 
-          # Sensor #2: Input Voltage measurement
+          # Sensor #2: Input Current measurement
           - element_type: "collection"
-            id_short: "SensorInputVoltage"
+            id_short: "SensorInputCurrent"
             value:
               - element_type: "property"
                 id_short: "SensorID"
                 value_type: "string"
-                value: "urn:iot-sensor:voltageXYZ"
+                value: "urn:iot-sensor:current123"
               - element_type: "property"
                 id_short: "MeasurementType"
                 value_type: "string"
-                value: "InputVoltage"
+                value: "InputCurrent"
 
   # A submodel for maintenance & diagnostics
   - id: "urn:aas:smart-home:charging-station:maintenance"
