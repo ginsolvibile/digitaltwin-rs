@@ -1,4 +1,4 @@
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
@@ -40,7 +40,7 @@ impl TwinRunner {
         let object_type = aas.id.split(':').nth(3).unwrap(); // FIXME: unwrap
         let (inner_state, slots) = match object_type {
             "light" => LightBulbFactory::create_default(),
-            "ev" => LightBulbFactory::create_default(),
+            "ev" => LightBulbFactory::create_default(), // TODO: implement EV
             "charging-station" => ChargingStationFactory::create_default(),
             _ => panic!("Unknown object type: {}", object_type),
         };
@@ -84,10 +84,10 @@ impl TwinRunner {
             {
                 self.slot_map.insert(sensor, s.to_string());
             } else {
-                warn!("No sensor ID found for {}", s);
+                warn!("{} No sensor ID found for {}", self.id(), s);
             }
         }
-        debug!("Slot map for {} is: {:?}", self.id(), self.slot_map);
+        trace!("Slot map for {} is: {:?}", self.id(), self.slot_map);
 
         // Subscribe to any sensor IDs found in the AAS in the IoTDataSources submodel under Sensors
         let sensor_ids = self

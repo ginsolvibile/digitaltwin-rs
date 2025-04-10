@@ -66,9 +66,9 @@ impl Manager {
                     continue;
                 }
                 info!(
-                    "Creating new digital twin for {} ({:?})",
+                    "Creating new digital twin for {} ({})",
                     aas.id,
-                    aas.description.as_ref()
+                    aas.description.as_ref().unwrap_or(&"-".to_string())
                 );
                 let twin = twin_runner::TwinRunner::new(aas, self.send_ch.clone(), self.network_ch.clone());
                 task::spawn(twin_runner::body(Box::new(twin)));
